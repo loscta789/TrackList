@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🎨 Thème clair */
+:root {
+  --background: #ffffff;       /* Blanc */
+  --foreground: #000000;       /* Texte Noir */
+  --primary: #2563eb;          /* Bleu vif */
+  --secondary: #e5e7eb;        /* Gris clair */
+  --accent: #3b82f6;           /* Bleu plus profond */
+  --success: #22c55e;          /* Vert émeraude (Validation) */
+  --warning: #facc15;          /* Jaune clair (Alerte légère) */
+  --error: #dc2626;            /* Rouge vif (Erreur) */
+  --process: #f97316;          /* Orange pour processus */
+}
+
+/* 🎨 Thème sombre */
+[data-theme="dark"] {
+  --background: #1a1a1a;       /* Noir profond */
+  --foreground: #f5f5f5;       /* Blanc cassé */
+  --primary: #4470e9;          /* Bleu foncé */
+  --secondary: #2d2d2d;        /* Gris foncé */
+  --accent: #60a5fa;           /* Bleu ciel */
+  --success: #16a34a;          /* Vert foncé (Validation) */
+  --warning: #eab308;          /* Jaune doré */
+  --error: #b91c1c;            /* Rouge foncé */
+  --process: #ea580c;          /* Orange foncé */
+}
+
+/* 🌿 Classes Tailwind personnalisées pour les couleurs dynamiques */
+.bg-background {
+  background-color: var(--background);
+}
+
+.text-foreground {
+  color: var(--foreground);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-secondary {
+  color: var(--secondary);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}
+
+.bg-success {
+  background-color: var(--success);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.bg-warning {
+  background-color: var(--warning);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.bg-error {
+  background-color: var(--error);
+}
+
+.text-error {
+  color: var(--error);
+}
+
+.bg-process {
+  background-color: var(--process);
+}
+
+.text-process {
+  color: var(--process);
+}
