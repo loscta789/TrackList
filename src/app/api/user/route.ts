@@ -2,28 +2,37 @@ import { supabase } from "../../../lib/supabaseClient";
 import { NextResponse } from "next/server";
 import * as cookie from "cookie";
 
-export async function GET(req) {
+export async function GET(req: Request) {
   console.log("📢 Requête reçue sur /api/user");
 
+  // ✅ Récupérer et parser les cookies
   const cookies = cookie.parse(req.headers.get("cookie") || "");
-  console.log("🍪 Cookies disponibles dans /api/user :", cookies);
+  //console.log("🍪 Cookies disponibles :", cookies);
 
-  // ✅ Utiliser `sb-access-token`, le vrai cookie de Supabase
+  // ✅ Vérifier la présence du `sb-access-token`
   const token = cookies["sb-access-token"];
 
   if (!token) {
-    console.warn("⚠️ Aucun `sb-access-token` trouvé dans les cookies !");
+    console.warn("⚠️ Aucun `sb-access-token` trouvé !");
     return NextResponse.json({ error: "Non connecté" }, { status: 401 });
   }
 
-  console.log("🔑 Token récupéré :", token);
+  // console.log("🔑 Token récupéré :", token);
 
-  const { data, error } = await supabase.auth.getUser(token);
+  // ✅ Récupérer l'utilisateur à partir du token
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
 
-  if (error || !data.user) {
-    console.error("❌ Session expirée ou invalide !");
-    return NextResponse.json({ error: "Session expirée ou invalide" }, { status: 401 });
+    if (error || !data.user) {
+      console.error("❌ Session invalide ou expirée :", error?.message);
+      return NextResponse.json({ error: "Session expirée ou invalide" }, { status: 401 });
+    }
+
+    console.log("✅ Utilisateur authentifié :", data.user);
+    return NextResponse.json({ user: data.user });
+
+  } catch (error) {
+    console.error("🔥 Erreur serveur :", error);
+    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
   }
-
-  return NextResponse.json({ user: data.user });
 }

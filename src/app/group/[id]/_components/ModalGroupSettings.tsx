@@ -5,11 +5,10 @@ import { motion } from "framer-motion";
 import { RxCross2 } from "react-icons/rx";
 import { RiAdminLine } from "react-icons/ri";
 import { useRouter } from "next/navigation";
+import { GroupInfo } from "../_typings/groupInterfaces";
 
-interface GroupSettingsProps {
-  groupId: string;
-  groupName: string;
-  joinCode: string;
+interface ModalGroupSettings {
+  group: GroupInfo;
   currentUserRole: boolean;
   onClose: () => void;
   onCloseSettings: () => void;
@@ -17,16 +16,13 @@ interface GroupSettingsProps {
   onOpen: () => void;
 }
 
-export default function GroupSettings({ 
-  groupId, 
-  groupName, 
-  joinCode, 
-  onClose, 
+export default function ModalGroupSettings({ 
+  group,
   onCloseSettings, 
   currentUserRole, 
   setIsOpenLink,
   onOpen,
-}: GroupSettingsProps) {
+}: ModalGroupSettings) {
   const router = useRouter();
 
   return (
@@ -42,7 +38,7 @@ export default function GroupSettings({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <MdSettings className="text-2xl text-primary" />
-          <h2 className="font-bold text-lg">{groupName}</h2>
+          <h2 className="font-bold text-lg">{group.name}</h2>
         </div>
         <button onClick={onCloseSettings} className="p-2 rounded-full hover:bg-secondary transition">
           <RxCross2 className="text-2xl text-primary" />
@@ -72,7 +68,7 @@ export default function GroupSettings({
       {/* 🔹 View Members */}
       <div className="flex flex-col space-y-3">
         <button
-          onClick={() => router.push(`/group/${groupId}/manage`)}
+          onClick={() => router.push(`/group/${group.id}/manage`)}
           className="flex items-center px-4 py-3 bg-secondary/20 rounded-lg transition hover:bg-secondary/40"
         >
           <MdLink className="mr-3 text-xl text-accent" />
@@ -101,7 +97,7 @@ export default function GroupSettings({
       {currentUserRole && (
         <div className="flex flex-col space-y-3">
           <button
-            onClick={() => router.push(`/group/${groupId}/manage`)}
+            onClick={() => router.push(`/group/${group.id}/manage`)}
             className="flex items-center px-4 py-3 bg-secondary/20 rounded-lg transition hover:bg-secondary/40"
           >
             <RiAdminLine className="mr-3 text-xl text-error" />

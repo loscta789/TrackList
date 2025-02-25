@@ -12,7 +12,7 @@ interface SettingsBarProps {
 }
 
 export default function SettingsBar({ isOpen, closeBar }: SettingsBarProps) {
-  const { user, logout, theme, setTheme } = useAuthStore();
+  const { isAuthenticated, logout, theme, setTheme } = useAuthStore();
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(theme || "light");
 
@@ -23,29 +23,31 @@ export default function SettingsBar({ isOpen, closeBar }: SettingsBarProps) {
   }, [isOpen]);
 
   useEffect(() => {
-    if (user) {
-      if (theme && theme !== currentTheme) {
-        setCurrentTheme(theme);
-      }
-    } else {
-      const storedTheme = localStorage.getItem("theme") || "light";
+    const storedTheme = localStorage.getItem("theme") || "light";
+    
+    if (!isAuthenticated) {
       setCurrentTheme(storedTheme);
+    } else if (theme && theme !== currentTheme) {
+      setCurrentTheme(theme);
     }
-  }, [theme, user]);
-
+  }, [theme, isAuthenticated]);
+  
   const handleThemeChange = async (newTheme: string) => {
     if (newTheme === currentTheme) return;
   
     setCurrentTheme(newTheme);
-    closeBar();
+    document.documentElement.setAttribute("data-theme", newTheme); // ✅ Met à jour le `<html>`
   
-    if (!user) {
-      localStorage.setItem("theme", newTheme);
-      useAuthStore.setState({ theme: newTheme }); // ✅ Immediately update Zustand state
+    if (!isAuthenticated) {
+      localStorage.setItem("theme", newTheme); // ✅ Stocker pour les utilisateurs non connectés
+      useAuthStore.setState({ theme: newTheme }); // ✅ Mettre à jour Zustand immédiatement
     } else {
-      await setTheme(newTheme);
+      await setTheme(newTheme); // ✅ Met à jour la base de données
     }
+  
+    closeBar();
   };
+  
   
 
   return (
@@ -110,7 +112,7 @@ export default function SettingsBar({ isOpen, closeBar }: SettingsBarProps) {
 
       {/* Connexion / Déconnexion */}
       <div className="px-6 pb-6">
-        {user ? (
+        {isAuthenticated ? (
           <button
             onClick={() => {
               logout();

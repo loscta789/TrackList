@@ -51,15 +51,14 @@ export const fetchUserProfile = async () => {
 
   export const updateLastGroup = async (groupId: string) => {
     try {
-      console.log("🍪 Cookies du navigateur:", document.cookie);
 
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // ✅ Assure que le cookie Supabase est envoyé
         body: JSON.stringify({ lastGroupId: groupId }),
+        credentials: "include", // ✅ Assure que le cookie Supabase est envoyé
       });
   
       if (!response.ok) {
@@ -67,7 +66,6 @@ export const fetchUserProfile = async () => {
         throw new Error(`❌ Échec mise à jour du dernier groupe : ${errorData.error || response.statusText}`);
       }
   
-      console.log("✅ Dernier groupe mis à jour avec succès !");
       return await response.json(); // ✅ Retourne les données de l'API
     } catch (error) {
       console.error("🚨 Erreur updateLastGroup:", error);

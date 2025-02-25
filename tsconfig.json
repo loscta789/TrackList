@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-, "src/app/api/login/route.ts", "src/app/api/group/route.ts", "src/app/api/logout/route.ts", "src/app/api/user/route.ts", "src/app/api/chat"  ],
+, "src/app/api/login/route.ts", "src/app/api/group/create/route.ts", "src/app/api/logout/route.ts", "src/app/api/user/route.ts", "src/app/api/chat", "src/lib/supabaseClient.js"  ],
   "exclude": [
     "node_modules"
   ]

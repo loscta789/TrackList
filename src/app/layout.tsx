@@ -5,18 +5,19 @@ import { useAuthStore } from "./store/authStore";
 import { useEffect } from "react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const { checkAuth, theme } = useAuthStore();
+  const { checkAuth, theme, isLoading } = useAuthStore();
 
   // 🔥 Ensure Zustand state is initialized correctly
   useEffect(() => {
-    checkAuth();
+   checkAuth();
   }, [checkAuth]);
+
 
 
 
   return (
     <html lang="en" data-theme={theme}>
-      <body className="bg-background text-foreground">
+      <body className="bg-background text-foreground ">
         <Header />
         <main>{children}</main>
       </body>

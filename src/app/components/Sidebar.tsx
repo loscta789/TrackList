@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, closeBar }: SidebarProps) {
-  const { user, groups = [], currentGroup, setCurrentGroup, logout } = useAuthStore();
+  const { isAuthenticated, groups = [], currentGroup, setCurrentGroup, logout } = useAuthStore();
   const [isGroupsOpen, setIsGroupsOpen] = useState(false);
 
 
@@ -67,7 +67,7 @@ export default function Sidebar({ isOpen, closeBar }: SidebarProps) {
           </li>
 
           {/* Sous-menu Groups */}
-          {user && groups.length > 0 && (
+          {isAuthenticated && groups.length > 0 && (
             <li>
               <button
                 onClick={handleToggleGroups}
@@ -88,8 +88,11 @@ export default function Sidebar({ isOpen, closeBar }: SidebarProps) {
                         href={`/group/${group.id}`}
                         onClick={() => {
                           closeBar?.();
-                          setCurrentGroup(group.id);
+                          if (currentGroup?.id !== group.id) {
+                            setCurrentGroup(group.id);
+                          }
                         }}
+                        
                         className={`p-2 rounded-lg flex items-center transition-all ${
                           currentGroup?.id === group.id
                             ? "bg-primary/20 text-blue-500 font-bold"
@@ -110,7 +113,7 @@ export default function Sidebar({ isOpen, closeBar }: SidebarProps) {
 
         {/* Boutons Connexion / Déconnexion */}
         <div className="flex gap-3">
-          {!user ? (
+          {!isAuthenticated ? (
             <>
               <Link
                 onClick={closeBar}
@@ -130,7 +133,11 @@ export default function Sidebar({ isOpen, closeBar }: SidebarProps) {
           ) : (
             <>
               <button
-                onClick={logout}
+                onClick={() => {
+                  logout();
+                  closeBar?.();
+                }}
+                
                 className="w-1/2 text-center bg-secondary text-foreground font-medium p-3 rounded-lg hover:bg-error hover:text-white transition-all"
               >
                 Logout

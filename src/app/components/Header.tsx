@@ -37,16 +37,6 @@ export default function Header() {
             >
               {isSidebarOpen ? <IoClose /> : <IoMenuSharp />}
             </button>
-
-            {/* <Link href="/">
-              <Image
-                src="/apple-logo.svg"
-                alt="logo"
-                width={70}
-                height={56}
-                className="transition-transform hover:scale-105"
-              />
-            </Link> */}
           </div>
 
           {/* Icônes Notifications & Paramètres */}

@@ -1,89 +1,120 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { useAuthStore } from "@/app/store/authStore";
-import { addProfiles } from "@/app/services/auth";
-import { Loader } from "@/app/components/Loader"; // 🔹 Loader moderne
-
+import React, { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useAuthStore } from "@/app/store/authStore"
 export default function AuthCallback() {
-  const router = useRouter();
-  const setUser = useAuthStore((state) => state.setUser);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "error" | "success">("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const { checkAuth} = useAuthStore();
+
 
   useEffect(() => {
-    async function finalizeOAuth() {
-      console.log("📢 Vérification de la session OAuth...");
-
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error || !data.session) {
-        console.error("❌ Erreur OAuth :", error);
-        setErrorMessage("An authentication error occurred. Please try again.");
-        setLoading(false);
+    const handleAuthCallback = async () => {
+      const hash = window.location.hash.substring(1); // 🔹 Remove "#"
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+  
+      if (!accessToken) {
+        setStatus("error");
+        setErrorMessage("Aucun token d'accès trouvé");
         return;
       }
-
-      console.log("✅ Session OAuth active :", data.session);
-      const user = data.session.user;
-
-      if (!user) {
-        setErrorMessage("User not found after authentication.");
-        setLoading(false);
-        return;
-      }
-
+  
       try {
-        await addProfiles(
-          user.id,
-          user.user_metadata.full_name || user.email.split("@")[0],
-          user.user_metadata.avatar_url || ""
-        );
-      } catch (error) {
-        console.error("❌ Error adding user profile:", error);
-      }
-
-      try {
-        await fetch("/api/auth/oauth", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/callback`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ access_token: data.session.access_token }),
+          body: JSON.stringify({ accessToken, refreshToken }),
           credentials: "include",
         });
+  
+        if (!response.ok) {
+          throw new Error("Erreur lors de l'envoi du token");
+        }
+  
+        setStatus("success");
+  
+        // ✅ Ensure Zustand updates before redirecting
+        await checkAuth(); 
+  
+        // ✅ Redirect after Zustand state is updated
+        window.location.href = "/";
+        
       } catch (error) {
-        console.error("❌ Error sending token to backend:", error);
+        console.error("❌ Erreur d'authentification :", error);
+        setStatus("error");
+        setErrorMessage("Impossible de compléter l'authentification");
       }
-
-      console.log("📢 Cookies after login:", document.cookie);
-
-      setUser(user);
-      router.push("/");
-    }
-
-    finalizeOAuth();
-  }, [router, setUser]);
+    };
+  
+    handleAuthCallback(); // 🔥 Execute function on mount
+  }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground">
-      {loading ? (
-        <>
-          <Loader />
-          <p className="text-primary mt-4">Authenticating...</p>
-        </>
-      ) : (
-        <div className="text-center p-6 bg-error text-white rounded-lg shadow-lg">
-          <p className="font-bold">⚠️ Authentication Failed</p>
-          <p className="text-sm mt-2">{errorMessage}</p>
-          <button 
-            onClick={() => router.push("/login")}
-            className="mt-4 px-4 py-2 bg-white text-error font-semibold rounded-lg hover:bg-gray-200 transition"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full">
+        {status === "loading" && (
+          <>
+            <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              Authentification en cours...
+            </h2>
+            <p className="text-gray-500">
+              Veuillez patienter pendant que nous sécurisons votre session
+            </p>
+          </>
+        )}
+
+        {status === "error" && (
+          <div className="text-red-500">
+            <svg
+              className="w-12 h-12 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h2 className="text-xl font-semibold mb-2">Une erreur est survenue</h2>
+            <p className="text-sm text-red-400">{errorMessage}</p>
+            <button
+              onClick={() => window.location.href = "/"}
+              className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+            >
+              Retour accueil
+            </button>
+          </div>
+        )}
+
+        {status === "success" && (
+          <div className="text-green-500">
+            <svg
+              className="w-12 h-12 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h2 className="text-xl font-semibold mb-2">Authentification réussie</h2>
+            <p className="text-sm text-green-400">Redirection en cours...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

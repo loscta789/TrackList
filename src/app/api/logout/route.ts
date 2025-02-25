@@ -1,29 +1,27 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import * as cookie from "cookie";
+import { getSupabaseServer } from "@/lib/auth";
 
-export async function POST() {
-  // 🔹 Supprimer le cookie en le mettant à vide
-  const cookieHeader = cookie.serialize("supabaseToken", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    expires: new Date(0), // Expire immédiatement
-    path: "/",
-  });
+export async function DELETE() {
 
-  const cookieUserId = cookie.serialize("user_id", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    expires: new Date(0), // Expire immédiatement
-    path: "/",
-  });
+  const supabase = await getSupabaseServer();
+  const cookieStore = cookies();
+
+  
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    return NextResponse.json({ error: "Erreur lors de la déconnexion" }, { status: 500 });
+  }
+
+  (await cookieStore).set("sb-access-token", "", {expires : new Date(0)});
+  (await cookieStore).set("sb-refresh-token", "", {expires : new Date(0)});
+  
 
   console.log("🚪 Déconnexion réussie !");
   
   const response = NextResponse.json({ message: "Déconnexion réussie" });
-  response.headers.set("Set-Cookie", cookieHeader);
-  response.headers.append("Set-Cookie", cookieUserId);
+
 
   return response;
 }

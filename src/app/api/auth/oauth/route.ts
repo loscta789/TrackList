@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import * as cookie from "cookie";
 
-export async function POST(req) {
+export async function POST(req: NextRequest) {
   try {
     const { access_token } = await req.json();
 

@@ -2,28 +2,23 @@
 
 import { MdSettings, MdLink, MdExitToApp } from "react-icons/md";
 import { motion } from "framer-motion";
-import { useAuthStore } from "../../store/authStore";
 import { RxCross2 } from "react-icons/rx";
+import { GroupInfo } from "@/app/group/[id]/_typings/groupInterfaces";
 
 interface ManageSettingsProps {
-  groupId: string;
-  groupName: string;
-  joinCode: string;
+  group:GroupInfo
   currentUserRole: boolean;
-  onClose: () => void;
   onCloseSettings: () => void;
   setIsOpenLink: (value: boolean) => void;
 }
 
 export default function GroupSettings({ 
-  groupId, 
-  groupName, 
-  joinCode, 
-  onClose, 
+  group, 
   onCloseSettings, 
-  currentUserRole, 
-  setIsOpenLink 
+  setIsOpenLink,
+  currentUserRole
 }: ManageSettingsProps) {
+
   return (
     <motion.div
       initial={{ y: "100%", opacity: 0 }}
@@ -37,7 +32,7 @@ export default function GroupSettings({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <MdSettings className="text-2xl text-gray-700" />
-          <h2 className="font-bold text-lg">{groupName}</h2>
+          <h2 className="font-bold text-lg">{group.name}</h2>
         </div>
         <button onClick={onCloseSettings} className="p-2 rounded-full hover:bg-gray-200 transition">
           <RxCross2 className="text-2xl text-gray-700" />

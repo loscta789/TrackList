@@ -15,9 +15,11 @@ export async function GET(req: Request) {
     .eq("group_id", groupId)
     .order("created_at", { ascending: true });
 
+
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  console.log("📦 Messages récupérés avec succès :", data);
   return NextResponse.json({ messages: data });
 }

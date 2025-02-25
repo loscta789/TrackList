@@ -1,6 +1,6 @@
 "use client";
 
-import { MdMoreVert, MdAdminPanelSettings, MdPersonRemove, MdVisibility } from "react-icons/md";
+import { MdMoreVert, MdAdminPanelSettings, MdPersonRemove} from "react-icons/md";
 import { Button } from "@/app/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/app/components/ui/popover";
 

@@ -1,23 +1,19 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerUser, signUpGoogle, signUpFacebook } from "@/app/services/auth";
+import { useAuthStore } from "@/app/store/authStore";
+import { loginUser, signUpGoogle, signUpFacebook } from "@/app/services/auth";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/app/components/ui/card";
-import { User, Mail, Lock } from "lucide-react";
+import { LoginFormData } from '@/app/login/_typings/form';
+import { Mail, Lock } from "lucide-react";
 
-export default function AuthFormRegister() {
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
+export default function LoginForm() {
+  const [form, setForm] = useState<LoginFormData>({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -32,17 +28,17 @@ export default function AuthFormRegister() {
     setIsLoading(true);
     setError("");
 
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      await registerUser(form.username, form.email, form.password);
-      router.push("/login");
-    } catch (error: any) {
-      setError(error.message || "An error occurred during registration");
+      const user = await loginUser(form.email, form.password);
+      if (!user.success) {
+        setError(user.error);
+        return;
+      }
+
+      useAuthStore.getState().setUser(user);
+      router.push("/");
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -51,26 +47,13 @@ export default function AuthFormRegister() {
   return (
     <Card className="bg-background/95 backdrop-blur-sm border border-secondary/20 rounded-2xl shadow-xl overflow-hidden">
       <CardHeader className="space-y-2 text-center pb-6">
-        <CardTitle className="text-2xl font-bold text-primary">Create Account</CardTitle>
-        <p className="text-secondary">Sign up and start managing your shopping lists</p>
+        <CardTitle className="text-2xl font-bold text-primary">Welcome Back!</CardTitle>
+        <p className="text-secondary">Sign in to continue to your account</p>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-5 h-5" />
-              <Input
-                type="text"
-                name="username"
-                placeholder="Username"
-                value={form.username}
-                onChange={handleChange}
-                className="pl-10 py-5 bg-secondary/10 border-secondary/20 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all"
-                required
-              />
-            </div>
-
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-5 h-5" />
               <Input
@@ -96,19 +79,6 @@ export default function AuthFormRegister() {
                 required
               />
             </div>
-
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-5 h-5" />
-              <Input
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                className="pl-10 py-5 bg-secondary/10 border-secondary/20 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all"
-                required
-              />
-            </div>
           </div>
 
           {error && (
@@ -124,7 +94,7 @@ export default function AuthFormRegister() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-success hover:bg-success/90 text-white py-5 rounded-xl font-medium transition-all"
+            className="w-full bg-primary hover:bg-primary/90 text-white py-5 rounded-xl font-medium transition-all"
           >
             {isLoading ? (
               <motion.div
@@ -133,7 +103,7 @@ export default function AuthFormRegister() {
                 className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
               />
             ) : (
-              "Create Account"
+              "Sign In"
             )}
           </Button>
         </form>
@@ -170,12 +140,12 @@ export default function AuthFormRegister() {
 
       <CardFooter className="text-center pb-8">
         <p className="text-secondary">
-          Already have an account?{" "}
+          Don't have an account?{" "}
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/register")}
             className="text-primary font-medium hover:underline focus:outline-none"
           >
-            Sign in
+            Sign up
           </button>
         </p>
       </CardFooter>

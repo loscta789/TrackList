@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { getUser, logoutUser } from "../services/auth";
 import { getUserGroups } from "../services/groups";
 import { fetchUserProfile, setUserTheme, updateLastGroup } from "../services/users";
+import {persist} from "zustand/middleware";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Group {
@@ -10,49 +11,69 @@ interface Group {
 }
 
 interface AuthState {
-  user: any;
+  isAuthenticated: boolean;
   username: string | null;
   avatar: string | null;
   groups: Group[];
   currentGroup: Group | null;
   theme: string;
   checkAuth: () => Promise<void>;
-  setUser: (user: any) => void;
+  setUser: (user: any) => Promise<void>;
   setGroups: (groups: Group[]) => void;
   addGroup: (group: Group) => void;
   setCurrentGroup: (groupId: string) => void;
   logout: () => Promise<void>;
   setTheme: (theme: string) => void;
+  hasCheckingAuth: boolean;
+  isCheckingAuth: boolean;
+  isLoading: boolean,
+
+
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create(persist<AuthState>(
+  (set, get) => ({
+  isAuthenticated: false,
   user: null,
   username: null,
   avatar: null,
   groups: [],
   currentGroup: null,
   theme:'light',
+  hasCheckingAuth: false,
+  isCheckingAuth: false,
+  isLoading: true,
 
   checkAuth: async () => {
     console.log("🔄 Exécution de checkAuth()...");
 
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
-        console.warn("⚠️ Aucun utilisateur connecté.");
-        return;
-      }
+    if (get().isAuthenticated) {
+      console.log("Session found in Zustand, restoring...")
+      set({isLoading:false})
+      return;
 
-      console.log("✅ Session active, récupération de l'utilisateur...");
+    }
+
+    const { data, error} = await supabase.auth.getSession();
+
+    if (error || !data.session) {
+      console.warn("⚠️ Aucun utilisateur connecté.");
+      set({ isAuthenticated: false, username: null, avatar: null, groups: [], currentGroup: null, isLoading: false });
+      return;
+    }
+
+    console.log("✅ Session active, récupération de l'utilisateur...");
+
       const userData = await getUser();
       if (!userData?.id) {
         console.warn("❌ Aucun utilisateur trouvé");
-        set({ user: null, username: null, avatar: null, groups: [], currentGroup: null });
+        set({isAuthenticated: false, username: null, avatar: null, groups: [], currentGroup: null, isLoading: false });
         return;
       }
 
       console.log("✅ Utilisateur trouvé :", userData.id);
-      const [profile, groups] = await Promise.all([
+
+      const [profile, groups] = await Promise.all([ //Fetch user profile and groups
         fetchUserProfile(), 
         getUserGroups(userData.id)
       ]);
@@ -60,55 +81,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const lastGroupId = profile?.last_group_id || null;
       const sortedGroups = [...groups].sort((a, b) => (a.id === lastGroupId ? -1 : b.id === lastGroupId ? 1 : 0));
 
-      // ✅ Met à jour Zustand avec le bon thème
-      const userTheme = profile?.theme || get().theme; // 🔥 Si l'utilisateur a un thème, on l'utilise
-      localStorage.setItem("theme", userTheme); // ✅ Stocker en local pour les futures visites
 
       set({
-        user: userData,
+        isAuthenticated: true,
         username: profile?.username || userData.email.split("@")[0],
         avatar: profile?.avatar_url || null,
         groups: sortedGroups,
         currentGroup: sortedGroups[0] || null,
-        theme: userTheme, // ✅ Appliquer le bon thème
+        theme: profile?.theme || "light", // ✅ Appliquer le bon thème
+        isLoading: false,
       });
 
-    } catch (error) {
-      console.error("🚨 Erreur lors de checkAuth :", error);
-      set({ user: null, username: null, avatar: null, groups: [], currentGroup: null });
-    }
+      
   },
 
-  setUser: (user) => {
-    set((state) => {
-      if (state.user?.id !== user?.id) {
-        getUserGroups(user.id).then((groups) => set({ groups }));
-      }
-      return { user };
+  setUser: async (user) => {
+    if (!user) return;
+
+    set({
+      isAuthenticated: true,
+      username: user.username || user.email.split("@")[0], // ✅ Use email as fallback
+      avatar: user.avatar_url || null,
     });
+
+    
   },
 
   setTheme: async (theme) => {
-    set({ theme }); // ✅ Instantly update Zustand state
+    set({ theme }); // ✅ Met à jour Zustand immédiatement
   
-    // ✅ Immediately update <html data-theme="..."> for Tailwind
-    document.documentElement.setAttribute("data-theme", theme);
-  
-    // ✅ Store in localStorage
-    localStorage.setItem("theme", theme);
-  
-    // 🔥 Update in database only if the user is logged in
-    if (get().user) {
+    document.documentElement.setAttribute("data-theme", theme); // ✅ Applique immédiatement le thème
+
+    if (get().isAuthenticated) {
       try {
         const updatedTheme = await setUserTheme(theme);
         if (updatedTheme) {
           set({ theme: updatedTheme.theme });
         }
       } catch (error) {
-        console.error("❌ Error updating theme in database:", error);
+        console.error("❌ Erreur mise à jour du thème dans la DB :", error);
       }
     }
   },
+  
   
   
   
@@ -132,8 +147,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setCurrentGroup: async (groupId) => {
-    const { user } = get();
-    if (!user) return;
+/*     const { user } = get();
+    if (!user) return; */
 
     set({ currentGroup: { id: groupId, name: "Loading..." } });
 
@@ -147,6 +162,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     await logoutUser();
-    set({ user: null, username: null, avatar: null, groups: [], currentGroup: null });
+    set({ isAuthenticated: false, username: null, avatar: null, groups: [], currentGroup: null });
   },
+})
+, {
+  name: "auth-storage",
 }));

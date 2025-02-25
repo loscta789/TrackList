@@ -3,24 +3,39 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/app/store/authStore";
 import { fetchGroupDetails } from "@/app/services/groups";
-import GroupHeader from "./GroupHeader";
-import GroupMember from "./GroupMember";
-import GroupSettings from "./GroupSettings";
+import GroupHeader from "./_components/GroupHeader";
+import GroupMember from "./_components/GroupMember";
+import GroupSettings from "./_components/GroupSettings";
 import { ScrollArea } from "@/app/components/ui/scroll-area";
 import { Card, CardHeader, CardContent } from "@/app/components/ui/card";
 import { MdPeople } from "react-icons/md";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 
+interface GroupMemberType {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+}
+
+interface GroupDetailsType {
+  id: string;
+  name: string;
+  joinCode: string;
+  created_at: string;
+  max_participants: number;
+  members: GroupMemberType[];
+}
+
 export default function ManageGroup() {
   const user = useAuthStore((state) => state.user);
   const currentGroup = useAuthStore((state) => state.currentGroup);
-  const [groupDetails, setGroupDetails] = useState<any>(null);
+  const [groupDetails, setGroupDetails] = useState<GroupDetailsType | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (currentGroup?.id) {
-      fetchGroupDetails(currentGroup.id).then((data) => {
+      fetchGroupDetails(currentGroup.id).then((data: GroupDetailsType) => {
         if (data) setGroupDetails(data);
       });
     }
@@ -30,8 +45,8 @@ export default function ManageGroup() {
   if (!currentGroup) return <p className="text-warning text-center">Aucun groupe sélectionné.</p>;
   if (!groupDetails) return <p className="text-secondary text-center">Chargement des détails du groupe...</p>;
 
-  // ✅ Vérifier si l'utilisateur actuel est admin
-  const isAdmin = groupDetails.members.some((member) => member.id === user.id && member.isAdmin);
+  // ✅ Vérifier si l'utilisateur actuel est admin avec un typage correct
+  const isAdmin = groupDetails.members.some((member: GroupMemberType) => member.id === user.id && member.isAdmin);
 
   // ✅ Formatage de la date
   const formattedDate = format(new Date(groupDetails.created_at), "d MMMM yyyy", { locale: enUS });
@@ -43,10 +58,11 @@ export default function ManageGroup() {
         name={groupDetails.name}
         joinCode={groupDetails.joinCode}
         isAdmin={isAdmin}
-        createdAt={formattedDate} // ✅ Passe la date formatée
+        createdAt={formattedDate}
         max_participants={groupDetails.max_participants}
-        onOpenSettings={() => setShowSettings(true)}
-      />
+        onUpdateGroupName={function (newName: string): void {
+          throw new Error("Function not implemented.");
+        } }      />
 
       {/* 🔹 Liste des membres */}
       <Card className="shadow-lg bg-secondary/20 border border-secondary">
@@ -59,8 +75,14 @@ export default function ManageGroup() {
         </CardHeader>
         <CardContent>
           <ScrollArea className="max-h-[300px] overflow-y-auto space-y-3">
-            {groupDetails.members.map((member) => (
-              <GroupMember key={member.id} member={member} />
+            {groupDetails.members.map((member: GroupMemberType) => (
+              <GroupMember 
+              key={member.id} 
+              member={member}
+              isAdmin={isAdmin}
+              onRemoveMember={() => {}}
+              onToggleAdmin={() => {}}
+               />
             ))}
           </ScrollArea>
         </CardContent>

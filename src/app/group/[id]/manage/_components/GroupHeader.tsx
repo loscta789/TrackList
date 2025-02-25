@@ -4,13 +4,12 @@ import { useState } from "react";
 import { Card, CardHeader, CardContent } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { MdUpdate, MdPeople, MdCalendarToday, MdVpnKey, MdRefresh, MdEdit, MdCheck } from "react-icons/md";
+import { MdPeople, MdCalendarToday, MdVpnKey, MdRefresh, MdEdit, MdCheck } from "react-icons/md";
 
 interface GroupHeaderProps {
   name: string;
   joinCode: string;
   isAdmin: boolean;
-  onOpenSettings: () => void;
   createdAt: string;
   max_participants: number;
   onUpdateGroupName: (newName: string) => void;
@@ -20,7 +19,6 @@ export default function GroupHeader({
   name, 
   joinCode, 
   isAdmin, 
-  onOpenSettings, 
   createdAt, 
   max_participants,
   onUpdateGroupName

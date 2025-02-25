@@ -16,8 +16,6 @@ interface ActionsButtonsProps {
 }
 
 export default function ActionsButtons({
-  onOpenForm,
-  onOpenSettings,
   onClose,
   onCloseSettings,
   onToggleSettingsForm,

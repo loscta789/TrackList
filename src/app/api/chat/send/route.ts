@@ -9,14 +9,17 @@ export async function POST(req: Request) {
   }
 
   const { data, error } = await supabase
-    .from("group_messages")
-    .insert([{ group_id: groupId, user_id: userId, content }])
-    .select("*")
-    .single();
+  .from("group_messages")
+  .insert([{ group_id: groupId, user_id: userId, content }])
+  .select("*, profiles(username)") // 🔥 Inclure le username
+  .single();
+
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  console.log("📦 Message sent successfully:", data);
 
   return NextResponse.json({ message: data });
 }

@@ -3,11 +3,18 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { fetchChatMessages, sendMessage } from "@/app/services/chat-groups";
-import { useAuthStore } from "@/app/store/authStore";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 import { RxCross2 } from "react-icons/rx";
 import { supabase } from "@/lib/supabaseClient";
+import { formatTimestamp } from "@/app/services/utils";
+interface ChatMessage {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  profiles: { username: string };
+}
 
 interface ChatBoxProps {
   groupId: string;
@@ -15,42 +22,83 @@ interface ChatBoxProps {
 }
 
 export default function ChatBox({ groupId, onClose }: ChatBoxProps) {
-  const user = useAuthStore((state) => state.user);
-  const {username, avatar} = useAuthStore((state) => state);
-  const [messages, setMessages] = useState<any[]>([]);
+
+
+  const [messages, setMessages] = useState<
+  ChatMessage[]
+>([]);
   const [message, setMessage] = useState("");
   const messagesRef = useRef(messages); // 🔥 Stocke la version actuelle des messages
 
   useEffect(() => {
     const loadMessages = async () => {
-      const data = await fetchChatMessages(groupId);
-      setMessages(data);
-      messagesRef.current = data; // 🔥 Met à jour la ref
+      const messagesData = await fetchChatMessages(groupId);
+      console.log("📩 Messages reçus dans ChatBox :", messagesData);
+  
+      if (Array.isArray(messagesData)) {
+        setMessages(messagesData);
+        console.log("✅ État `messages` mis à jour :", messagesData);
+      } else {
+        console.error("⚠️ Erreur : messagesData n'est pas un tableau", messagesData);
+      }
     };
 
     loadMessages();
 
     // 📌 Abonnement en temps réel à `group_messages`
     const channel = supabase
-      .channel(`chat:${groupId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${groupId}` },
-        (payload) => {
-          console.log("📢 Nouveau message reçu :", payload.new);
+  .channel(`chat:${groupId}`)
+  .on(
+    "postgres_changes",
+    { event: "INSERT", schema: "public", table: "group_messages", filter: `group_id=eq.${groupId}` },
+    async (payload) => {
+      console.log("📢 Nouveau message reçu payload:", payload.new);
 
-          // 🔥 S'assurer que le message ne soit pas ajouté en double
-          setMessages((prevMessages) => {
-            if (!prevMessages.find((msg) => msg.id === payload.new.id)) {
-              return [...prevMessages, payload.new];
-            }
-            return prevMessages;
-          });
+      // 🔥 Récupérer le username directement avec `user_id`
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", payload.new.user_id)
+        .single();
 
-          messagesRef.current = [...messagesRef.current, payload.new]; // 🔥 Met à jour la ref
+      if (error) {
+        console.error("❌ Erreur lors de la récupération du username :", error);
+      }
+
+      // 🔥 Mettre à jour `payload.new` avec le username récupéré
+      payload.new.profiles = profile ? { username: profile.username } : { username: "Utilisateur inconnu" };
+
+      // ✅ Ajouter le message dans la liste
+      setMessages((prevMessages) => {
+        if (!prevMessages.find((msg) => msg.id === payload.new.id)) {
+          return [
+            ...prevMessages,
+            {
+              id: payload.new.id,
+              content: payload.new.content,
+              created_at: payload.new.created_at,
+              user_id: payload.new.user_id,
+              profiles: { username: payload.new.profiles.username },
+            },
+          ];
         }
-      )
-      .subscribe();
+        return prevMessages;
+      });
+
+      messagesRef.current = [
+        ...messagesRef.current,
+        {
+          id: payload.new.id,
+          content: payload.new.content,
+          created_at: payload.new.created_at,
+          user_id: payload.new.user_id,
+          profiles: { username: payload.new.profiles.username },
+        },
+      ];
+    }
+  )
+  .subscribe();
+
 
     return () => {
       supabase.removeChannel(channel);
@@ -60,47 +108,21 @@ export default function ChatBox({ groupId, onClose }: ChatBoxProps) {
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
-    // 🔥 Crée un message temporaire pour l'afficher immédiatement
-    const tempMessage = {
-      id: Date.now().toString(), // ID temporaire
-      user_id: user.id,
-      content: message,
-      created_at: new Date().toISOString(),
-      profiles: username,
-    };
+    // 🔹 Envoie le message à Supabase
+    const newMessage = await sendMessage(groupId, message);
 
-    setMessages((prevMessages) => [...prevMessages, tempMessage]);
-    messagesRef.current = [...messagesRef.current, tempMessage];
+    if (!newMessage) {
+      console.error("❌ Le message retourné est NULL ou UNDEFINED !");
+    } else {
+      console.log("✅ Message reçu :", newMessage);
+      setMessages((prev) => [...prev, newMessage]);
+    }
 
-    // 🔥 Envoie à Supabase (il sera remplacé en temps réel)
-    await sendMessage(groupId, user.id, message);
-    setMessage("");
+
+    setMessage(""); // 🔥 Réinitialise l'input après envoi
   };
 
-  // ✅ Fonction pour formater la date
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-
-    const isToday =
-      date.getDate() === now.getDate() &&
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear();
-
-    const isYesterday =
-      date.getDate() === now.getDate() - 1 &&
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear();
-
-    const hours = date.getHours() % 12 || 12;
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const ampm = date.getHours() >= 12 ? "PM" : "AM";
-
-    if (isToday) return `Today at ${hours}:${minutes} ${ampm}`;
-    if (isYesterday) return `Yesterday at ${hours}:${minutes} ${ampm}`;
-
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}, ${hours}:${minutes} ${ampm}`;
-  };
+  
 
   // 🔥 Auto-scroll vers le bas
   const messagesEndRef = useRef<HTMLDivElement>(null);

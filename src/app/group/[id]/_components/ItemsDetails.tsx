@@ -3,30 +3,26 @@ import { enUS } from "date-fns/locale";
 import { Button } from "@/app/components/ui/button";
 import { FiClock, FiCheckCircle, FiTrash2 } from "react-icons/fi";
 import { useEffect } from "react";
+import { GroupItem } from "../_typings/groupInterfaces";
+import { useAuthStore } from "@/app/store/authStore";
+import { fetchDeleteItem, updateItemState } from "@/app/services/items";
+
 
 interface ItemDetailsProps {
-  item: { id: string; content: string; state: number; details?: string; created_at: string };
-  userId: string;
-  currentUserId: string;
-  updateItem: (itemId: string, newState: "process" | "done") => void;
+  currentItem: GroupItem
   closeOverlay: () => void;
-  author: string;
-  state: number;
-  deleteItem: (itemId: string, itemUserId: string) => void;
 }
 
 export default function ItemDetails({
-  item,
-  userId,
-  currentUserId,
-  updateItem,
+  currentItem,
   closeOverlay,
-  deleteItem,
-  author,
-  state,
+
 }: ItemDetailsProps) {
-  const createdAtDate = new Date(item.created_at);
+  console.log(currentItem, "📌 currentItem");
+  const createdAtDate = new Date(currentItem.created_at);
   const formattedTime = format(createdAtDate, "h:mm a", { locale: enUS });
+  const userId = useAuthStore((state) => state.user);
+  const authorOfItemId = currentItem.user_id;
 
   let displayDate;
   const daysAgo = differenceInDays(new Date(), createdAtDate);
@@ -54,9 +50,9 @@ export default function ItemDetails({
       <div className="relative bg-background h-full text-foreground w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl min-h-[80vh] sm:min-h-[60vh] rounded-lg shadow-xl overflow-hidden">
         {/* 🔹 Header */}
         <div className="border-b p-5 sm:p-6">
-          <h2 className="text-lg sm:text-2xl font-bold text-primary">{item.content}</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-primary">{currentItem.content}</h2>
           <p className="text-xs sm:text-sm text-secondary italic">
-            Added by {author}, {displayDate}
+            Added by {currentItem.username}, {displayDate}
           </p>
         </div>
 
@@ -66,7 +62,7 @@ export default function ItemDetails({
           <div className="border-b pb-4 mb-4">
             <h3 className="text-md sm:text-lg font-semibold text-accent">📝 Description</h3>
             <p className="text-sm sm:text-md text-secondary mt-2">
-              {item.details ? item.details : "No additional details."}
+              {currentItem.details ? currentItem.details : "No additional details."}
             </p>
           </div>
 
@@ -76,14 +72,20 @@ export default function ItemDetails({
             <div className="flex flex-col sm:flex-row gap-3 mt-3">
               <Button
                 className="flex-1 flex items-center justify-center gap-2 bg-warning text-white hover:bg-warning/80"
-                onClick={() => updateItem(item.id, "process")}
+                onClick={() => {
+                  updateItemState(currentItem.id, 2);
+                  closeOverlay();
+                }}
               >
                 <FiClock />
                 In Progress
               </Button>
               <Button
                 className="flex-1 flex items-center justify-center gap-2 bg-success text-white hover:bg-success/80"
-                onClick={() => updateItem(item.id, "done")}
+                onClick={() => {
+                  updateItemState(currentItem.id, 1);
+                  closeOverlay();
+                }}
               >
                 <FiCheckCircle />
                 Purchased
@@ -92,11 +94,11 @@ export default function ItemDetails({
           </div>
 
           {/* 🗑️ Delete Button (Only if user owns the item) */}
-          {userId === currentUserId && (
+          {userId === authorOfItemId && (
             <div className="pb-4 mb-4">
               <Button
                 className="w-full flex items-center justify-center gap-2 bg-error text-white hover:bg-error/80"
-                onClick={() => deleteItem(item.id, userId)}
+                onClick={() => fetchDeleteItem(currentItem.id)}
               >
                 <FiTrash2 />
                 Delete

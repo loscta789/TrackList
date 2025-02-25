@@ -1,16 +1,42 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseServer } from "@/lib/auth";
+import { isGroupMember } from "@/lib/auth";
+import {GroupInfo} from "@/app/group/[id]/_typings/groupInterfaces";
+export async function GET(req: Request, {params} : { params : {id:string}}) {
+  
+  const userId = req.headers.get("x-user-id");
 
-export async function GET(req: Request, context: { params: { id: string } }) {
-  const { id: groupId } = await context.params; // ✅ Pas besoin de `await`
+  if (!userId) {
+    console.log("Unauthorized")
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  console.log(`📌 Récupération du groupe avec ID : ${groupId}`);
+  }
+
+  const groupId = params.id;
+  console.log("ID du groupe requis", groupId)
+
 
   if (!groupId) {
+    console.log("ID du groupe requis")
     return NextResponse.json({ error: "ID du groupe requis" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+
+  
+  let response: GroupInfo;
+  try {
+  
+
+
+    const supabase = await getSupabaseServer();
+    const checkGroup = await isGroupMember(groupId, userId, supabase);
+
+    if (!checkGroup) {
+      console.log("Vous n'êtes pas membre de ce groupe")
+      return NextResponse.json({ error: "Vous n'êtes pas membre de ce groupe" }, { status: 403 });
+    }
+
+    const { data, error } = await supabase
     .from("groups")
     .select(`
       id,
@@ -21,6 +47,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
       group_members (
         user_id,
         role,
+        joined_at,
         profiles (
           username,
           avatar
@@ -42,48 +69,52 @@ export async function GET(req: Request, context: { params: { id: string } }) {
     .eq("id", groupId)
     .single();
 
-  if (error || !data) {
-    console.error("❌ Erreur lors de la récupération du groupe :", error?.message);
-    return NextResponse.json({ error: "Groupe introuvable" }, { status: 404 });
+
+    if (error) {
+      console.log("❌ Erreur lors de la recherche du groupe :", error);
+      return NextResponse.json({ error: "Erreur lors de la recherche du groupe." }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: "Groupe introuvable" }, { status: 404 });
+    }
+
+    response ={
+      id: data.id,
+      name: data.name,
+      joinCode: data.join_code,
+      created_at: data.created_at,
+      max_participants: data.max_participants,
+      members: data.group_members.map((member) => ({
+        id: member.user_id,
+        username: Array.isArray(member.profiles) ? member.profiles[0]?.username || "Utilisateur inconnu" : member.profiles?.username || "Utilisateur inconnu",
+        avatar: Array.isArray(member.profiles) ? member.profiles[0]?.avatar || "" : member.profiles?.avatar || "",
+        role: member.role || "user",
+        joined_at: member.joined_at,
+        items: data.group_items
+          .filter((item) => item.user_id === member.user_id) // ✅ Automatically associate items
+          .map((item) => ({
+            id: item.id,
+            content: item.content,
+            state: item.state,
+            details: item.details,
+            created_at: item.created_at,
+            username: Array.isArray(item.profiles) ? item.profiles[0]?.username || "Utilisateur inconnu" : item.profiles?.username || "Utilisateur inconnu",
+            avatar: Array.isArray(item.profiles) ? item.profiles[0]?.avatar || "" : item.profiles?.avatar || "",
+            user_id: item.user_id, // ✅ Ensure this matches GroupItem
+          })),
+      }))
+    };
+
+  } catch (error) {
+    console.error("❌ Erreur interne du serveur :", error);
+    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
   }
 
-  console.log("✅ Groupe récupéré avec succès :");
+  return NextResponse.json({ group: response, currentUserId: userId });
 
-  // ✅ Associer les items à leur auteur
-  const membersMap = new Map();
 
-  // Construire une map des membres pour l'association des items
-  data.group_members?.forEach((m) => {
-    membersMap.set(m.user_id, {
-      id: m.user_id,
-      username: m.profiles?.username || "Utilisateur inconnu",
-      role: m.role || "user",
-      avatar: m.profiles?.avatar || null,
-      isAdmin: m.role === "admin",
-      items: [], // Initialisation avec un tableau vide d'items
-    });
-  });
 
-  // Associer les items à leur auteur
-  data.group_items?.forEach((item) => {
-    if (membersMap.has(item.user_id)) {
-      membersMap.get(item.user_id).items.push({
-        id: item.id,
-        content: item.content,
-        state: item.state,
-        created_at: item.created_at,
-        details: item.details,
-      });
-    }
-  });
+};
 
-  return NextResponse.json({
-    id: data.id,
-    name: data.name,
-    joinCode: data.join_code,
-    created_at: data.created_at,
-    max_participants: data.max_participants,
 
-    members: Array.from(membersMap.values()), // Convertir la Map en tableau
-  });
-}

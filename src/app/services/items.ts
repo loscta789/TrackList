@@ -1,14 +1,14 @@
-import { useAuthStore } from "@/app/store/authStore";
 
-export const updateItemState = async (itemId: string, newState: string) => {
+export const updateItemState = async (itemId: string, newState: number) => {
     try {
-      const res = await fetch("/api/items/update", {
+      const res = await fetch("/api/items", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, newState }),
       });
   
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error || "Erreur inconnue");
       return true; // ✅ Succès
     } catch (err) {
@@ -17,40 +17,38 @@ export const updateItemState = async (itemId: string, newState: string) => {
     }
   };
 
-  export const fetchAddItem = async (groupId: string, userId: string, content: string, details: string) => {
+  export const fetchAddItem = async (groupId: string, content: string, details: string) => {
     try {
-      console.log("fetch", userId);
-      const res = await fetch("/api/items/add", {
+      const res = await fetch("/api/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId, userId, content, details: details || "" }),
+        body: JSON.stringify({ groupId, content, details }),
+        credentials: "include",
       });
 
       const data = await res.json();
       console.log("📌 Réponse API après ajout :", data); // 🔍 Log la réponse API
 
       if (!res.ok || !data.data) {
-        throw new Error(data.error || "Erreur inconnue, aucune donnée retournée");
+        return data.error
       }
 
-      // ✅ Récupérer `username` depuis Zustand au lieu de refaire une requête API
-      const username = useAuthStore.getState().user?.username || "Utilisateur inconnu";
+      return true;
 
-      return { ...data.data, username }; // ✅ Ajoute immédiatement le `username`
     } catch (err) {
       console.error("❌ Erreur lors de l'ajout de l'élément :", err);
-      return null; // ❌ Échec
+      return err;
     }
 };
 
-export const fetchDeleteItem = async (id: string, userId: string): Promise<boolean> => {
+export const fetchDeleteItem = async (id: string): Promise<boolean> => {
   try {
-    console.log("🔴 Suppression de l'élément avec ID:", id, "par l'utilisateur", userId);
 
 
-    const res = await fetch(`/api/items/${id}?userId=${userId}`, {
+    const res = await fetch(`/api/items/${id}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
     });
 
     if (!res.ok) {

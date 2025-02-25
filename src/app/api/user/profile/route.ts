@@ -1,10 +1,9 @@
-
 import { supabase } from "@/lib/supabaseClient";
 import { NextResponse } from "next/server";
 import * as cookie from "cookie";
+import { getSupabaseServer } from "@/lib/auth";
 
-
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const { id, username, avatar } = await req.json();
 
@@ -15,7 +14,7 @@ export async function POST(req) {
     console.log("📢 Requête reçue pour ajouter un profil :", { id, username, avatar });
 
     // 🔹 Vérifier si le profil existe déjà
-    const { data: existingProfile, error: profileError } = await supabase
+    const { data: existingProfile } = await supabase
       .from("profiles")
       .select("id")
       .eq("id", id)
@@ -60,93 +59,68 @@ export async function GET(req: Request) {
 
     console.log("🔑 Token récupéré :", access_token);
 
-    // 🔹 Forcer Supabase à utiliser ce token pour récupérer la session
-    await supabase.auth.setSession({ access_token, refresh_token: access_token });
+    // 🔹 Récupérer la session utilisateur
+    const { data, error } = await supabase.auth.getUser(access_token);
 
-    // 🔹 Récupérer la session après `setSession()`
-    const { data, error } = await supabase.auth.getSession();
-
-    console.log("🔐 Session utilisateur après setSession :", data, "erreur", error);
-
-    if (error || !data.session) {
+    if (error || !data.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user_id = data.session.user.id;
+    const user_id = data.user.id;
 
     // 🔹 Récupérer le profil utilisateur depuis Supabase
-    const { data: profiles, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("theme, last_group_id, username, avatar")
       .eq("id", user_id)
       .single();
 
-    if (profileError || !profiles) {
+    if (profileError || !profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    console.log("📢 Profil récupéré :", profiles);
-    return NextResponse.json(profiles);
+    console.log("📢 Profil récupéré :", profile);
+    return NextResponse.json(profile);
   } catch (error) {
     console.error("🔥 Erreur API `/api/users/profile` :", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-
-/**
- * Met à jour soit le thème, soit le dernier groupe utilisé de l'utilisateur.
- */
+// 🔹 Met à jour le profil utilisateur (PATCH)
 export async function PATCH(req: Request) {
   console.log("🔁 Requête PATCH `/api/user/profile`");
-  console.log("🍪 Cookies reçus dans l'API :", req.headers.get("cookie"));
 
   try {
-    // 🔹 Récupérer le token manuellement
-    const cookies = cookie.parse(req.headers.get("cookie") || "");
-    const token = cookies["sb-access-token"];
-
-    if (!token) {
-      console.warn("❌ Aucun `sb-access-token` trouvé !");
+   
+    const userId = req.headers.get("x-user-id");
+    if (!userId) {
+      console.log("Not authentified")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("🔑 Token récupéré :", token);
+    const supabase = await getSupabaseServer();
 
-    // 🔥 Forcer Supabase à reconnaître la session avec le token
-    await supabase.auth.setSession({ access_token: token, refresh_token: token });
 
-    // 🔹 Maintenant, récupérer la session correctement
-    const { data, error } = await supabase.auth.getSession();
-
-    console.log("🔐 Session utilisateur après setSession :", data, "erreur", error);
-
-    if (error || !data.session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const user_id = data.session.user.id;
-
-    // 🔹 Récupérer les données du body
     const { theme, lastGroupId } = await req.json();
 
-    if ((theme && lastGroupId) || (!theme && !lastGroupId)) {
+    const hasTheme = theme !== undefined;
+    const hasLastGroupId = lastGroupId !== undefined;
+
+    if (hasTheme === hasLastGroupId) { 
       return NextResponse.json(
         { error: "Vous devez envoyer soit `theme`, soit `lastGroupId`, mais pas les deux." },
         { status: 400 }
       );
     }
 
-    // 🔹 Construire l'objet de mise à jour
-    const updateData: Record<string, any> = {};
-    if (theme) updateData.theme = theme;
-    if (lastGroupId) updateData.last_group_id = lastGroupId;
+    const updateData: Record<string, unknown> = hasTheme ? { theme } : { last_group_id: lastGroupId };
 
     // 🔹 Mise à jour dans la base de données
     const { error: updateError } = await supabase
       .from("profiles")
       .update(updateData)
-      .eq("id", user_id);
+      .eq("id", userId);
 
     if (updateError) {
       console.error("❌ Erreur mise à jour du profil :", updateError.message);
@@ -161,4 +135,3 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

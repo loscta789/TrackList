@@ -1,46 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import ItemForm from "@/app/components/ItemForm";
-import { fetchAddItem } from "@/app/services/items";
+import ItemForm from "@/app/group/[id]/_components/ItemForm";
 import ActionsButtons from "./ActionsButtons";
-import GroupSettings from "./GroupSettings";
+import ModalGroupSettings from "./ModalGroupSettings";
 import GenerateGroupLinkModal from "./GenerateGroupLinkModal";
 import ManageSettings from "./ManageSettings";
 import ConfirmAction from "@/app/components/ConfirmAction";
 import ChatBox from "./ChatBox";
+import { GroupInfo } from "../_typings/groupInterfaces";
 
 interface ActionsAreaProps {
-  userId: string;
-  groupId: string;
-  groupName: string;
-  joinCode: string;
-  currentUserRole: boolean;
+  group: GroupInfo;
   showForm: boolean;
   setShowForm: (value: boolean) => void;
   onToggleShowForm: () => void;
-  members: {
-    id: string;
-    username: string;
-    items: { id: string; content: string; state: number; created_at: string };
-  }[];
-  onItemAdded: (item: { 
-    id: string; 
-    content: string; 
-    details: string; 
-    username: string;
-    userId: string;
-    state: number;
-    created_at: string;
-  }) => void;
+  currentUserId: string | null;
+
 }
 
-export default function ActionsArea({ userId, groupId, onItemAdded, members, groupName, joinCode, currentUserRole, showForm, setShowForm, onToggleShowForm }: ActionsAreaProps) {
+export default function ActionsArea({ group, showForm, setShowForm, onToggleShowForm, currentUserId }: ActionsAreaProps) {
   const [settingsForm, setSettingsForm] = useState(false);
   const [isOpenLink, setIsOpenLink] = useState(false);
   const [manageForm, setManageForm] = useState(false);
   const [confirmAction, setConfirmAction] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  console.log("group", group);
+  const currentUserRole = group.members.some((user) => user.id === currentUserId && user.role === "admin");
 
   return (
     <div className="relative w-full h-full">
@@ -50,7 +36,7 @@ export default function ActionsArea({ userId, groupId, onItemAdded, members, gro
       )}
       {showChat && (
         <div className="absolute bottom-[calc(100%)] left-0 w-full transition-transform duration-300 z-50 translate-y-0">
-          <ChatBox groupId={groupId} onClose={() => setShowChat(false)} />
+          <ChatBox groupId={group.id} onClose={() => setShowChat(false)} />
         </div>
       )}
 
@@ -61,13 +47,8 @@ export default function ActionsArea({ userId, groupId, onItemAdded, members, gro
       {showForm && (
         <div className="absolute bottom-[calc(100%)] left-0 w-full transition-transform duration-300 z-50 translate-y-0">
           <ItemForm
-            userId={userId}
-            groupId={groupId}
-            onItemAdded={onItemAdded}
-            members={members}
+            group={group}
             onClose={() => setShowForm(false)}
-            fetchAddItem={fetchAddItem}
-            onCloseSettings={() => setSettingsForm(false)}
           />
         </div>
       )}
@@ -78,10 +59,8 @@ export default function ActionsArea({ userId, groupId, onItemAdded, members, gro
       )}
       {settingsForm && (
         <div className="absolute bottom-[calc(100%)] left-0 w-full transition-transform duration-300 z-50 translate-y-0">
-          <GroupSettings
-            groupId={groupId}
-            groupName={groupName}
-            joinCode={joinCode}
+          <ModalGroupSettings
+            group={group}
             onClose={() => setShowForm(false)}
             onCloseSettings={() => setSettingsForm(false)}
             currentUserRole={currentUserRole}
@@ -95,13 +74,10 @@ export default function ActionsArea({ userId, groupId, onItemAdded, members, gro
       {manageForm && (
         <div className="absolute bottom-[calc(100%)] left-0 w-full transition-transform duration-300 z-50 translate-y-0">
           <ManageSettings
-            groupId={groupId}
-            groupName={groupName}
-            joinCode={joinCode}
-            onClose={() => setShowForm(false)}
+            group={group}
             onCloseSettings={() => setSettingsForm(false)}
-            currentUserRole={currentUserRole}
             setIsOpenLink={setIsOpenLink}
+            currentUserRole={currentUserRole}
           />
         </div>
       )}
@@ -122,7 +98,7 @@ export default function ActionsArea({ userId, groupId, onItemAdded, members, gro
 
       {/* ✅ Generate Group Link Modal */}
       {isOpenLink && (
-        <GenerateGroupLinkModal isOpen={isOpenLink} onClose={() => setIsOpenLink(false)} joinCode={joinCode} />
+        <GenerateGroupLinkModal isOpen={isOpenLink} onClose={() => setIsOpenLink(false)} joinCode={group.joinCode} />
       )}
 
       {/* ✅ Confirm Action Modal */}

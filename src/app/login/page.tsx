@@ -1,30 +1,29 @@
 "use client";
 import { motion } from "framer-motion";
-import LoginForm from "./LoginForm";
-
+import LoginForm from "./_components/LoginForm";
 
 export default function Page() {
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-background text-foreground px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 flex flex-col items-center justify-center px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center max-w-2xl"
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="text-center max-w-2xl mb-8"
       >
-        <h1 className="text-3xl phone:text-4xl font-bold tracking-wide text-primary">
-          Welcome to Grocery Groups
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary mb-4">
+          Welcome Back to Grocery Groups
         </h1>
-        <p className="text-secondary text-lg mt-2">
-          Organize your shopping lists effortlessly.
+        <p className="text-secondary text-lg sm:text-xl">
+          Your shopping lists, organized and simplified
         </p>
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="w-full max-w-sm phone:max-w-md tablet:max-w-lg mt-6 bg-background tablet:mt-12 bg-secondary p-6 rounded-lg shadow-lg"
+        transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+        className="w-full max-w-md"
       >
         <LoginForm />
       </motion.div>

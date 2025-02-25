@@ -2,81 +2,40 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Button } from "./ui/button";
+import { Input } from "@/app/components/ui/input";
+import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@/app/components/ui/button";
+import { fetchAddItem } from "@/app/services/items";
+import { GroupInfo } from "@/app/group/[id]/_typings/groupInterfaces";
 
 interface ItemFormProps {
-  userId: string;
-  groupId: string;
-  onItemAdded: (item: {
-    id: string;
-    content: string;
-    details: string;
-    username: string;
-    userId: string;
-    state: number;
-    created_at: string;
-  }) => void;
-  members: {
-    id: string;
-    username: string;
-    items: { id: string; content: string; state: number }[];
-  }[];
+  group:GroupInfo
   onClose: () => void;
-  onCloseSettings: () => void;
-  fetchAddItem: (groupId: string, userId: string, content: string, details: string) => Promise<any>;
+  
+ 
+  
 }
 
 export default function ItemForm({
-  userId,
-  groupId,
-  onItemAdded,
-  members,
+  group,
   onClose,
-  fetchAddItem,
-  onCloseSettings,
+  
 }: ItemFormProps) {
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemDetails, setNewItemDetails] = useState("");
+  const [error, setError] = useState("");
 
   const addItem = async () => {
     if (!newItemTitle.trim()) return;
 
-    const currentUser = members.find((member) => member.id === userId);
-    const username = currentUser ? currentUser.username : "Utilisateur inconnu";
+    const newItemFromServer = await fetchAddItem(group.id, newItemTitle, newItemDetails);
 
-    const tempId = Date.now().toString();
-    const tempCreatedAt = new Date().toISOString();
-
-    // 🔹 Ajout temporaire
-    const tempItem = {
-      id: tempId,
-      content: newItemTitle,
-      details: newItemDetails,
-      created_at: tempCreatedAt,
-      username,
-      userId,
-      state: 0,
-    };
-
-    onItemAdded(tempItem);
-
-    // 🔹 Envoi à la base de données
-    const newItemFromServer = await fetchAddItem(groupId, userId, newItemTitle, newItemDetails);
-
-    if (newItemFromServer) {
-      // 🔥 Mise à jour avec la vraie date
-      onItemAdded({
-        ...tempItem,
-        id: newItemFromServer.id,
-        state: newItemFromServer.state,
-        details: newItemFromServer.details,
-        created_at: newItemFromServer.created_at,
-      });
+    if (!newItemFromServer) {
+      setError(newItemFromServer.error);
     }
 
-    // 🔹 Réinitialisation des champs
+    console.log("Item ajouté")
+
     setNewItemTitle("");
     setNewItemDetails("");
     onClose();

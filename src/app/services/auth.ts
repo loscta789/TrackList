@@ -1,5 +1,4 @@
 import { useAuthStore } from "../store/authStore";
-import { signIn } from "next-auth/react";
 import { supabase } from "@/lib/supabaseClient";
 
 export const registerUser = async (username: string, email: string, password: string) => {
@@ -24,9 +23,12 @@ export const registerUser = async (username: string, email: string, password: st
     }
   };
 
+
   export const loginUser = async (email: string, password: string) => {
     console.log("🔑 Tentative de connexion...");
+  
     try {
+      // ✅ Appel de l'API Backend
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -35,40 +37,31 @@ export const registerUser = async (username: string, email: string, password: st
       });
   
       const data = await res.json();
-      
+  
       if (!res.ok) {
-        throw new Error(data.error || "Erreur de connexion");
+        console.log("Res pas ok")
+        return { success: false, error: data.error || "Erreur de connexion" };
       }
   
-      console.log("✅ Connexion réussie, vérification de la session...");
+      console.log("✅ Connexion réussie, mise à jour du store...");
   
-      // 🔹 Vérifie immédiatement la session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // ✅ Updat store with user data
+      const setUser = useAuthStore.getState().setUser;
+      setUser(data.user);
   
-      if (sessionError || !sessionData.session) {
-        console.error("🚨 Session non récupérée après connexion :", sessionError);
-        throw new Error("Impossible de récupérer la session.");
+      return { success: true, user: data.user };
+  
+    } catch (error: unknown) {
+      console.error("🚨 Erreur inattendue lors de la connexion :", error);
+  
+      let errorMessage = "Une erreur inconnue est survenue";
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
   
-      console.log("🔍 Session active :", sessionData);
-  
-      // 🔹 Stocker l'utilisateur dans Zustand
-      useAuthStore.getState().setUser(data.user);
-  
-      // 🔹 Vérifie si `checkAuth()` est nécessaire
-      const isAuthenticated = !!useAuthStore.getState().user;
-      if (!isAuthenticated) {
-        console.log("🔄 L'utilisateur n'était pas encore chargé, appel de checkAuth()...");
-        await useAuthStore.getState().checkAuth();
-      }
-  
-      return data.user;
-    } catch (error) {
-      console.error("❌ Erreur lors de la connexion :", error);
-      throw error;
+      return { success: false, error: errorMessage };
     }
   };
-  
   
   
   export const getUser = async () => {
@@ -77,22 +70,26 @@ export const registerUser = async (username: string, email: string, password: st
       const data = await res.json();
   
       if (!res.ok) {
-        throw new Error(data.error || "Non connecté");
+        return false;
       }
   
       return data.user; // ✅ Retourne `user`, qui contient `username`
     } catch (error) {
+      console.error("❌ Erreur lors de la récupération de l'utilisateur :", error);
       return null; // ✅ Retourne `null` si l'utilisateur n'est pas connecté
     }
   };
   
   export const logoutUser = async () => {
   try {
-    const res = await fetch("/api/logout", { method: "POST", credentials: "include" });
+    const res = await fetch("/api/logout", 
+      { method: "DELETE", credentials: "include" });
+    
 
     if (!res.ok) {
       throw new Error("Erreur lors de la déconnexion");
     }
+    
   } catch (error) {
     console.error("❌ Erreur de déconnexion :", error);
   }
@@ -107,12 +104,9 @@ export const signUpGoogle = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `http://localhost:3000/auth/callback`,
+        redirectTo: `${process.env.NEXT_PUBLIC_API_URL}/auth/callback`,
       },
     });
-
-    
-    
 
     console.log("Données retournées par Supabase:", data);
 
@@ -136,7 +130,7 @@ export const signUpFacebook = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "facebook",
       options: {
-        redirectTo: `http://localhost:3000/auth/callback`,
+        redirectTo: `${process.env.NEXTAUTH_URL}/auth/callback`,
       },
     });
 
@@ -147,7 +141,6 @@ export const signUpFacebook = async () => {
       console.log("Erreur complète :", error);
       console.log("Code d'erreur :", error.code);
       console.log("Message :", error.message);
-      console.log("Détails supplémentaires :", error.details);
       console.log("Statut :", error.status);
       throw error;
     }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabaseClient';
 
-export async function POST(req) {
+export async function POST(req: Request) {  // ✅ Ajout du type Request
   console.log("🟢 Arrivé dans l'inscription");
 
   try {

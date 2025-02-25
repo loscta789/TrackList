@@ -5,9 +5,9 @@
 /* 🎨 Thème clair */
 :root {
   --background: #ffffff;       /* Blanc */
-  --foreground: #000000;       /* Texte Noir */
-  --primary: #2563eb;          /* Bleu vif */
-  --secondary: #e5e7eb;        /* Gris clair */
+  --foreground: #3d888d;       /* Texte Noir */
+  --primary: #6286d4;          /* Bleu vif */
+  --secondary: #36383b;        /* Gris clair */
   --accent: #3b82f6;           /* Bleu plus profond */
   --success: #22c55e;          /* Vert émeraude (Validation) */
   --warning: #facc15;          /* Jaune clair (Alerte légère) */
@@ -20,7 +20,7 @@
   --background: #1a1a1a;       /* Noir profond */
   --foreground: #f5f5f5;       /* Blanc cassé */
   --primary: #4470e9;          /* Bleu foncé */
-  --secondary: #2d2d2d;        /* Gris foncé */
+  --secondary: #e0cccc;        /* Gris foncé */
   --accent: #60a5fa;           /* Bleu ciel */
   --success: #16a34a;          /* Vert foncé (Validation) */
   --warning: #eab308;          /* Jaune doré */
@@ -80,3 +80,5 @@
 .text-process {
   color: var(--process);
 }
+
+
